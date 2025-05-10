@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: class docstring
+# key: docclass
+# --
+"""
+${1:Short summary of the class.}
+
+Attributes:
+${2:attr1} (${3:type}): ${4:Description of attr1.}
+"""

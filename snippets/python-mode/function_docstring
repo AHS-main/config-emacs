@@ -1,0 +1,21 @@
+# -*- mode: snippet -*-
+# name: function docstring
+# key: docfunc
+# --
+def ${1:function_name}(${2:args}):
+"""${3:Summary of the function.}
+
+${4:More details here if necessary.}
+
+Args:
+${5:param} (${6:type}): ${7:Description of param.}
+
+Returns:
+${8:return type}: ${9:Description of the return value.}
+
+Raises:
+${10:ExceptionType}: ${11:reason if applicable.}
+
+$0
+"""
+${0:pass}

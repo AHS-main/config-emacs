@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: module docstring
+# key: docmod
+# --
+"""
+${1:Short description of this module.}
+
+This module provides:
+- ${2:Feature 1}
+"""

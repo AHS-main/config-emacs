@@ -1,0 +1,792 @@
+#+TITLE: Emacs Configuration
+#+AUTHOR: AHS-main
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* Package Management
+- Add some commonly used package archives.
+- Use 'use-package' for package management.
+
+#+begin_src emacs-lisp
+  (require 'package)
+  (setq package-archives
+        '(("gnu"          . "https://elpa.gnu.org/packages/")
+          ("melpa"        . "https://melpa.org/packages/")
+          ("melpa-stable" . "https://stable.melpa.org/packages/")
+          ("org"          . "https://orgmode.org/elpa/")))
+  (package-initialize)
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+end_src
+
+* Shell Integration
+- Use 'exec-path-from-shell' to inherit shell environment.
+
+#+begin_src emacs-lisp
+  (use-package exec-path-from-shell
+    :ensure t
+    :if (memq window-system '(mac ns x))
+    :init
+    ;; Delay initialization until Emacs is idle for 1 second.
+    (run-with-idle-timer
+     1 nil
+     (lambda ()
+       (require 'exec-path-from-shell)
+       (setq exec-path-from-shell-variables '("PATH" "LANG" "LC_ALL"))
+       (exec-path-from-shell-initialize))))
+#+end_src
+
+* UI Customizations
+
+** Basic:
+- Disable menu bar, tool bar, startup screen etc..
+- Display line and column numbers.
+- Use relative line numbers.
+- Use visual bell.
+- Set frame title based on current buffer.
+- Set default window size to 130 columns and 60 rows.
+- Set default font size to 11pt.
+
+#+begin_src emacs-lisp
+  (menu-bar-mode -1)
+  (toggle-scroll-bar -1)
+  (tool-bar-mode -1)
+  (setq inhibit-startup-screen t)
+  (setq column-number-mode t)
+  (global-display-line-numbers-mode t)
+  (setq display-line-numbers-type 'relative)
+  (setq visible-bell t)
+  (setq frame-title-format '((:eval (if (buffer-file-name)
+                                        (abbreviate-file-name (buffer-file-name))
+                                      "%b"))))
+  (push '(width . 130) default-frame-alist)
+  (push '(height . 45) default-frame-alist)
+  (set-face-attribute 'default nil :height 100)
+#+end_src
+
+** Themes and Mode Line:
+- Use Doom One theme.
+- Use Doom mode line.
+
+#+begin_src emacs-lisp
+  (use-package doom-themes
+    :config (load-theme 'doom-one t))
+  (use-package doom-modeline
+    :init (doom-modeline-mode +1)
+    :config
+    (setq doom-modeline-height 25
+          doom-modeline-icon t
+          doom-modeline-unicode-fallback t))
+
+#+end_src
+
+* EOL (Ease of Life)
+
+** Basic
+- Shorten prompt responses.
+- Remove whitespace on save.
+- Detect file changes (Auto-Revert-Mode).
+- Increase clipboard size.
+- Disable Lockfiles.
+- Auto-confirm closing Emacs with running processes.
+- Enable smooth scrolling.
+- Replace selected text when typing or pasting.
+- Split windows horizontally rather than vertically.
+
+#+begin_src emacs-lisp
+  (fset 'yes-or-no-p 'y-or-n-p)
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  (global-auto-revert-mode t)
+  (setq auto-revert-verbose nil)
+  (setq kill-ring-max 100)
+  (setq create-lockfiles nil)
+  (setq confirm-kill-processes nil)
+  (setq scroll-margin 0)
+  (setq scroll-conservatively 100000)
+  (setq scroll-preserve-screen-position t)
+  (delete-selection-mode +1)
+  (setq split-height-threshold nil)
+  (setq split-width-threshold 80)
+  (setq gc-cons-threshold (* 100 1000 1000))
+  (setq recentf-max-saved-items 100)
+#+end_src
+
+** Optimizations
+- Increase garbage collection threshold.
+- Keep longer file history.
+
+#+begin_src emacs-lisp
+  (setq gc-cons-threshold (* 100 1000 1000))
+  (setq recentf-max-saved-items 100)
+#+end_src
+
+** Backups
+- Save backups in separate directory.
+- Auto-delete excess backups.
+- Use versioned backups.
+- Keep 10 latest backups and 2 oldest backups.
+
+#+begin_src emacs-lisp
+  (setq backup-directory-alist `(("." . "~/.emacs.d/backups")))
+  (setq auto-save-file-name-transforms `((".*" ,"~/.emacs.d/autosaves/\\1" t)))
+  (setq auto-save-list-file-prefix "~/.emacs.d/autosaves/sessions/")
+  (setq make-backup-files t)
+  (setq backup-by-copying t)
+  (setq delete-old-versions t)
+  (setq version-control t)
+  (setq kept-new-versions 10)
+  (setq kept-old-versions 2)
+  (setq auto-save-timeout 20)
+  (setq auto-save-interval 200)
+#+end_src
+
+* Help
+- Use 'helpful'.
+
+#+begin_src emacs-lisp
+  (use-package helpful
+    :ensure t
+    :custom
+    (counsel-describe-function-function #'helpful-callable)
+    (counsel-describe-variable-function #'helpful-variable)
+    :bind (("C-h f" . helpful-callable)
+           ("C-h v" . helpful-variable)
+           ("C-h k" . helpful-key)
+           ("C-h x" . helpful-command)
+           ("C-c C-d" . helpful-at-point)))
+#+end_src
+
+* Navigation
+
+** Basic
+- Move between visual lines.
+- Highlight current line.
+
+#+begin_src emacs-lisp
+  (setq line-move-visual t)
+  (global-hl-line-mode +1)
+#+end_src
+
+* Editing
+
+** Copying & Cutting
+- Copy or cut the whole line when the cursor is on it (without selecting).
+- Delete selection on paste.
+- Move cursor to end of pasted text.
+
+#+begin_src emacs-lisp
+  (defun my-copy ()
+    "Copy selected text if region actove, otherwise copy current line"
+    (interactive)
+    (if (use-region-p)
+        (progn
+          (kill-ring-save (region-beginning) (region-end))
+          (message "Copied region"))
+      (kill-ring-save (line-beginning-position) (line-end-position))
+      (message "Copied line")))
+  (defun my-cut ()
+    "Cut selected text if region actove, otherwise cut current line"
+    (interactive)
+    (if (use-region-p)
+        (progn
+          (kill-region (region-beginning) (region-end))
+          (message "Cut region"))
+      (kill-region (line-beginning-position) (line-end-position))
+      (message "Cut line")))
+  (delete-selection-mode +1)
+  (defun my-yank ()
+    "Replace selected text when pasting, then move cursor to end of pasted content."
+    (interactive)
+    (when (use-region-p)
+      (delete-region (region-beginning) (region-end)))
+    (yank)
+    (deactivate-mark)
+    (when (region-active-p)
+      (goto-char (region-end))))
+  (global-set-key (kbd "M-w") 'my-copy)
+  (global-set-key (kbd "C-w") 'my-cut)
+  (global-set-key (kbd "C-y") 'my-yank)
+#+end_src
+
+** Undo & Redo
+- `C-_` for undo.
+- `C-+` for redo.
+- Persistent undo history.
+
+#+begin_src emacs-lisp
+  (use-package undo-tree
+    :config
+    (global-undo-tree-mode +1)
+    (setq undo-tree-auto-save-history t)
+    (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))))
+  (global-set-key (kbd "C-_") 'undo-tree-undo)
+  (global-set-key (kbd "C-+") 'undo-tree-redo)
+#+end_src
+
+** Brackets & Quotes
+- Auto-close `()`, `{}`, `[]`, `""`, `''`.
+
+#+begin_src emacs-lisp
+  (electric-pair-mode +1)
+#+end_src
+
+** Word Wrapping
+- Wrap buffer contents dynamically based on window width.
+
+#+begin_src emacs-lisp
+  (global-visual-line-mode +1)
+  (setq word-wrap t)
+#+end_src
+
+** Indentation
+- Auto-indent after pressing `Enter`.
+- Use spaces instead of tabs.
+- Auto-indent after pasting.
+- Use 'TAB' and 'S+TAB' or '<backtab>' for indentation.
+
+#+begin_src emacs-lisp
+  (electric-indent-mode +1)
+  (setq-default indent-tabs-mode nil)
+  (setq-default tab-width 4)
+  (dolist (command '(yank yank-pop))
+    (eval `(defadvice ,command (after indent-region activate)
+             (if (not current-prefix-arg)
+                 (indent-region (region-beginning) (region-end) nil)))))
+#+end_src
+
+** Selection
+- Semantic selection expansion and contraction.
+
+#+begin_src emacs-lisp
+  (use-package expand-region
+    :bind(("C-=" . er/expand-region)
+          ("C--" . er/contract-region)))
+#+end_src
+
+** Deleting
+- Set 'C-<backspace>' to delete whole line.
+
+#+begin_src emacs-lisp
+  (defun my-delete-whole-line ()
+    "Delete the entire line without adding it to the kill ring."
+    (interactive)
+    (delete-region (line-beginning-position) (line-end-position))
+    (delete-char 1))
+  (global-set-key (kbd "C-<backspace>") 'my-delete-whole-line)
+#+end_src
+
+* Completion and Spelling
+
+** Buffer Completion
+- Use 'company-mode'.
+
+#+begin_src emacs-lisp
+  (use-package company
+    :init
+    (global-company-mode +1)
+    :config
+    (setq company-idle-delay 0.1)
+    (setq company-minimum-prefix-length 1)
+    (setq company-selection-wrap-around t)
+    (setq company-tooltip-align-annotations t)
+    (setq company-tooltip-limit 10)
+    (setq company-backends '((company-capf
+                              company-dabbrev-code
+                              company-files
+                              company-math-symbols-latex
+                              company-latex-commands
+                              company-yasnippet
+                              company-reftex-citations
+                              company-reftex-labels)))
+    (global-set-key (kbd "C-M-i") 'company-complete))
+
+#+end_src
+
+** Mini-buffer Completion
+- Use 'vertico' + 'orderless' + 'marginalia' + 'consult' ecosystem.
+
+#+begin_src emacs-lisp
+  (use-package vertico
+    :init (vertico-mode +1))
+  (use-package orderless
+    :custom
+    (completion-styles '(orderless))
+    (completion-category-defaults nil)
+    (completion-category-overrides '((file (styles basic partial-completion)))))
+  (use-package marginalia
+    :init (marginalia-mode +1)
+    :custom (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light)))
+  (use-package consult
+    :bind (("C-x b" . consult-buffer)
+           ("M-g g" . consult-goto-line)
+           ("M-g M-g" . consult-goto-line)
+           ("C-c h" . consult-history)
+           ("M-i"   . consult-imenu)
+           ("C-x C-r" . consult-recent-file)
+           ("C-c p f" . consult-projectile-find-file)
+           ("C-c p p" . consult-projectile-switch-project))
+    :config
+    (setq consult-narrow-key "<")
+    (setq consult-project-root-function #'projectile-project-root)
+    (setq consult-preview-key "M-."))
+#+end_src
+
+** Spelling
+- Use 'hunspell' + 'flyspell' for spell checking.
+- Highlight misspelled words.
+- Use 'flyspell-correct' for better correction menu. Mapped to 'M-;'.
+
+#+begin_src emacs-lisp
+  (setq ispell-program-name "hunspell")
+  (setq ispell-dictionary "en_US")
+  (use-package flyspell
+    :hook ((text-mode . flyspell-mode)
+           (prog-mode . flyspell-prog-mode)
+           (org-mode . flyspell-mode)
+           (LaTeX-mode . flyspell-mode)))
+  (use-package flyspell-correct
+    :bind (("M-;" . flyspell-correct-word-before-point)))
+#+end_src
+
+** Snippets
+- Use 'yasnippet' for managing templates.
+
+#+begin_src emacs-lisp
+      (use-package yasnippet
+        :ensure t
+        :hook ((LaTeX-mode . yas-minor-mode)
+               (python-mode . yas-minor-mode)
+               (sh-mode . yas-minor-mode))
+        :config
+        (yas-reload-all))
+#+end_src
+
+** Key-Bindings
+- Use 'which-key'.
+#+begin_src emacs-lisp
+  (use-package which-key
+    :ensure t
+    :config (which-key-mode +1))
+#+end_src
+
+* File, Buffer, and Window Management
+
+** Buffers
+- Instant buffer killing.
+- Cycle buffers with 'M-[' and 'M-]'.
+- Buffer cleanup using 'midnight'.
+
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-x k") 'kill-this-buffer)
+  (global-set-key (kbd "M-[") 'previous-buffer)
+  (global-set-key (kbd "M-]") 'next-buffer)
+  (use-package midnight
+    :config (midnight-mode +1))
+#+end_src
+
+** Windows
+
+- Move between windows with 'S-<left>' and 'S-<right>'.
+- Kill windows with 'S-<backspace>'.
+- Better window balancing.
+- Move in and out of minibuffer with 'S-<up>' and 'S-<down>'.
+
+#+begin_src emacs-lisp
+  (windmove-default-keybindings)
+  (global-set-key (kbd "S-<backspace>") 'delete-window)
+  (defun my-split-window-below-and-balance ()
+    "Split the window horizontally and balance."
+    (interactive)
+    (split-window-below)
+    (balance-windows))
+  (defun my-split-window-right-and-balance ()
+    "Split the window vertically and balance."
+    (interactive)
+    (split-window-right)
+    (balance-windows))
+  (global-set-key (kbd "C-x 2") 'my-split-window-below-and-balance)
+  (global-set-key (kbd "C-x 3") 'my-split-window-right-and-balance)
+  (defvar my-minibuffer-last-window nil
+    "The window that was active before switching to the minibuffer.")
+  (defun my-switch-to-minibuffer ()
+    "Switch to the minibuffer window if active."
+    (interactive)
+    (if (minibuffer-window-active-p (minibuffer-window))
+        (progn
+          (setq my-minibuffer-last-window (selected-window))
+          (select-window (minibuffer-window)))
+      (message "No active minibuffer.")))
+  (defun my-exit-minibuffer-focus ()
+    "Return focus to the window before entering the minibuffer."
+    (interactive)
+    (if (and my-minibuffer-last-window (window-live-p my-minibuffer-last-window))
+        (select-window my-minibuffer-last-window)
+      (message "No window to return to.")))
+  (global-set-key (kbd "S-<down>") 'my-switch-to-minibuffer)
+  (global-set-key (kbd "S-<up>") 'my-exit-minibuffer-focus)
+#+end_src
+
+* File Types
+
+** PDF
+
+*** Basic
+- Use 'pdf-tools' for PDF viewing.
+- Always open '.pdf' files in pdf-view-mode.
+- Dark-mode viewing.
+- Map copying from region in pdf to 'M-w'
+
+#+begin_src emacs-lisp
+  (use-package pdf-tools
+    :ensure t
+    :config
+    (pdf-tools-install)
+    (setq-default pdf-view-display-size 'fit-width)
+    (setq pdf-view-use-scaling t)
+    (setq pdf-view-use-imagemagick nil)
+    (setq pdf-view-continuous t)
+    (add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode -1)))
+    (add-hook 'pdf-view-mode-hook (lambda () (pdf-view-midnight-minor-mode +1)))
+    (add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
+    (define-key pdf-view-mode-map (kbd "M-w") 'pdf-view-kill-ring-save))
+#+end_src
+
+*** Annotations
+- Keep track of annotations in a PDF using a stack (session dependent).
+- Highlight selected region with 'C-c h'.
+- Underline selected region with 'C-c u'.
+- Use markdown for comments.
+- Edit (add comment) to last annotation with 'C-c e'.
+- Delete last annotation with 'C-c d'.
+
+#+begin_src emacs-lisp
+  (with-eval-after-load 'pdf-tools
+    (defvar-local my-pdf-annotation-stack nil
+      "Stack of annotation objects created by user in pdf-view.")
+    (defun my-pdf--push-annotation (annot)
+      "Push ANNOT onto the annotation stack."
+      (when annot (push annot my-pdf-annotation-stack)))
+    (defun my-pdf-read-highlight-color ()
+      "Prompt for a highlight color.
+  Return a string representing the chosen color."
+      (let ((char (read-char "Choose highlight color: (g=green, y=yellow, b=blue, r=red, p=purple, o=orange): ")))
+        (cl-case char
+          (?g "green")
+          (?y "yellow")
+          (?b "blue")
+          (?r "red")
+          (?p "purple")
+          (?o "orange")
+          (t "yellow"))))
+    (defun my-pdf-annot-highlight ()
+      "Highlight selected region with a chosen color and store the annotation."
+      (interactive)
+      (let* ((color (my-pdf-read-highlight-color))
+             (annot (pdf-annot-add-highlight-markup-annotation (pdf-view-active-region) color)))
+        (pdf-view-deactivate-region)
+        (my-pdf--push-annotation annot)))
+    (defun my-pdf-annot-underline ()
+      "Underline selected region and store the annotation."
+      (interactive)
+      (let ((annot (pdf-annot-add-underline-markup-annotation (pdf-view-active-region))))
+        (pdf-view-deactivate-region)
+        (my-pdf--push-annotation annot)))
+    (setq pdf-annot-edit-contents-setup-function
+          (lambda (a)
+            (unless (derived-mode-p 'gfm-mode)
+              (markdown-mode))))
+    (defun my-pdf-annot-edit-last ()
+      "Edit the comment of the most recent annotation."
+      (interactive)
+      (if (car my-pdf-annotation-stack)
+          (pdf-annot-edit-contents (car my-pdf-annotation-stack))
+        (message "No recent annotation to edit.")))
+    (defun my-pdf-annot-delete-last ()
+      "Delete the most recent annotation (pop it from the stack)."
+      (interactive)
+      (if (car my-pdf-annotation-stack)
+          (let ((annot (pop my-pdf-annotation-stack)))
+            (pdf-annot-delete annot)
+            (message "Deleted last annotation."))
+        (message "No recent annotation to delete.")))
+    (define-key pdf-view-mode-map (kbd "C-c h") 'my-pdf-annot-highlight)
+    (define-key pdf-view-mode-map (kbd "C-c u") 'my-pdf-annot-underline)
+    (define-key pdf-view-mode-map (kbd "C-c e") 'my-pdf-annot-edit-last)
+    (define-key pdf-view-mode-map (kbd "C-c d") 'my-pdf-annot-delete-last))
+#+end_src
+
+** Markdown
+- Use 'markdown-mode'.
+- Use GitHub Flavored Markdown.
+- Custom export function.
+
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :ensure t
+    :mode (("\\.md\\'" . gfm-mode)
+           ("\\.markdown\\'" . gfm-mode))
+    :init (setq markdown-command "pandoc")
+    :bind (:map markdown-mode-map
+                ("C-c x" . my-markdown-export)))
+  (defun my-markdown-export ()
+    "Export current Markdown file with selectable output format."
+    (interactive)
+    (let* ((formats '(("HTML" . "html")
+                      ("PDF" . "pdf")
+                      ("LaTeX" . "latex")
+                      ("DOCX" . "docx")
+                      ("ODT" . "odt")
+                      ("EPUB" . "epub")))
+           (choice (completing-read "Export format: " (mapcar #'car formats)))
+           (ext (cdr (assoc choice formats)))
+           (input (buffer-file-name))
+           (output (concat (file-name-sans-extension input) "." ext))
+           (cmd (format "pandoc \"%s\" -o \"%s\"" input output)))
+      (when (yes-or-no-p (format "Export to %s?" output))
+        (shell-command cmd)
+        (message "Exported to %s" output)
+        (when (yes-or-no-p "Open the exported file?")
+          (browse-url-of-file output)))))
+#+end_src
+
+** Tex/Latex
+
+*** Basic
+- Use 'auctex'.
+- Use 'reftex' for reference and citations.
+- Use 'synctex' for synchronization between PDF and source.
+- Use 'cdlatex' for faster insertion.
+- View output PDF using 'pdf-tools'.
+- Define function for template loading.
+- Use 'company-reftext' for bibliography completion.
+
+#+begin_src emacs-lisp
+  (use-package auctex
+    :defer t
+    :ensure t
+    :hook ((LaTeX-mode . TeX-PDF-mode)
+           (LaTex-mode . turn-on-reftex))
+    :config
+    (setq TeX-auto-save t)
+    (setq TeX-parse-self t)
+    (setq-default TeX-master nil)
+    (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+    (setq reftex-plug-into-AUCTeX t)
+    (setq TeX-source-correlate-mode t)
+    (setq TeX-source-correlate-method 'synctex)
+    (setq TeX-view-program-selection '((output-pdf "PDF Tools"))
+          TeX-source-correlate-start-server t)
+    (add-hook 'TeX-after-compilation-finished-functions
+              #'TeX-revert-document-buffer))
+  (use-package company-reftex
+    :ensure t
+    :after (company reftex))
+#+end_src
+
+** JSON/JSONL
+- use 'json-mode'.
+- Set indent width to 2.
+- Add warning for pretty printing.
+
+#+begin_src emacs-lisp
+  (use-package json-mode
+    :ensure t
+    :mode (("\\.json\\'" . json-mode)
+           ("\\.jsonl\\'" . json-mode))
+    :config (setq json-mode-indent-width 2))
+  (defun my-json-pretty-print-buffer-warning ()
+    "Pretty print the JSON content of the current buffer.
+  WARNING: This will change the contents of the buffer. Proceed?"
+    (interactive)
+    (if (y-or-n-p "Warning: Pretty printing will change the contents of the buffer. Proceed? ")
+        (json-pretty-print-buffer)
+      (message "Pretty printing cancelled.")))
+  (with-eval-after-load 'json-mode
+    (define-key json-mode-map (kbd "C-c p") 'my-json-pretty-print-buffer-warning))
+
+#+end_src
+
+** CSV
+- use 'csv-mode'.
+
+#+begin_src emacs-lisp
+  (use-package csv-mode
+    :ensure t
+    :mode ("\\.csv\\'")
+    :config
+    (setq csv-separators '("," ";")))
+#+end_src
+
+** HTML/XHTML
+- use 'web-mode'.
+
+#+begin_src emacs-lisp
+  (use-package web-mode
+    :ensure t
+    :mode (("\\.html?\\'" . web-mode)
+           ("\\.xhtml\\'" . web-mode))
+    :config
+    (setq web-mode-code-indent-offset 2
+          web-mode-markup-indent-offset 2))
+#+end_src
+
+** YAML
+- use 'yaml-mode'.
+
+#+begin_src emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    :mode (("\\.yml\\'" . yaml-mode)
+           ("\\.yaml\\'" . yaml-mode)))
+#+end_src
+
+* Version Control
+- Use 'magit'.
+
+#+begin_src emacs-lisp
+  (use-package magit
+    :ensure t)
+#+end_src
+
+* Programming
+
+** General
+- Use 'lsp-mode'.
+- Use 'lsp-ui'.
+- Use 'flycheck'.
+
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+    :hook ((python-mode . lsp-deferred)
+           (c-mode        . lsp-deferred)
+           (c++-mode      . lsp-deferred)
+           (bash-mode     . lsp-deferred))
+    :commands lsp-deferred
+    :config
+    (setq lsp-prefer-flymake nil)
+    (setq lsp-enable-snippet t)
+    (setq lsp-completion-provider :capf))
+  (use-package lsp-ui
+    :ensure t
+    :commands lsp-ui-mode
+    :config
+    (setq lsp-ui-doc-enable t
+          lsp-ui-sideline-enable t
+          lsp-ui-position 'at-point
+          lsp-ui-sideline-show-hover t
+          lsp-ui-doc-delay 1.0
+          lsp-ui-sideline-delay 1.5))
+  (use-package flycheck
+    :ensure t
+    :init (global-flycheck-mode +1))
+#+end_src
+
+** Project Management
+- Use 'projectile'.
+- Integrate 'projectile with consult using 'consult-projectile'.
+
+#+begin_src emacs-lisp
+  (use-package projectile
+    :ensure t
+    :demand t
+    :init
+    (require 'projectile)
+    :config
+    (setq projectile-completion-system 'orderless))
+  (use-package consult-projectile
+    :ensure t)
+#+end_src
+
+*** Languages
+
+**** Python
+- Use 'pyright' as lsp.
+- Use 'pyenv-mode' for environment management.
+- TODO: Use 'dap-mode' + 'debugpy' for debugging.
+- Use 'blacken' for formatting.
+- TODO: Use 'pytest' for testing.
+
+#+begin_src emacs-lisp
+  (use-package lsp-pyright
+    :ensure t
+    :after lsp-mode
+    :hook (python-mode . (lambda ()
+                           (require 'lsp-pyright)
+                           (lsp-deferred)))
+    :config
+    (setq lsp-pyright-typechecking-mode "standard"
+          lsp-pyright-auto-import-completions t
+          lsp-pyright-auto-search-paths t
+          lsp-pyright-python-executable-cmd "python3"
+          lsp-pyright-log-level "info"))
+  (use-package pyvenv
+    :ensure t
+    :config (pyvenv-mode +1))
+  (use-package blacken
+    :ensure t
+    :hook (python-mode . blacken-mode)
+    :config (setq blacken-line-length 88))
+#+end_src
+
+**** Bash/Shell
+
+#+begin_src emacs-lisp
+  (add-hook 'bash-mode-hook #'lsp-deferred)
+#+end_src
+
+**** C/C++
+
+#+begin_src emacs-lisp
+  (add-hook 'c-mode-hook #'lsp-deferred)
+  (add-hook 'c++-mode-hook #'lsp-deferred)
+#+end_src
+
+** Terminal
+- Use 'vterm'.
+- Open a new terminal window with 'C-c t'.
+
+#+begin_src emacs-lisp
+  (use-package vterm
+    :ensure t
+    :commands (vterm)
+    :config
+    (setq vterm-shell "/bin/bash"))
+
+  (defun my-open-vterm-horizontal ()
+    "Open vterm in a horizontally split window."
+    (interactive)
+    (split-window-below)
+    (other-window 1)
+    (vterm))
+
+  (global-set-key (kbd "C-c t") 'my-open-vterm-horizontal)
+#+end_src
+
+** SSH
+- Use 'tramp'.
+- Disable 'lsp-mode' for remote buffers.
+
+
+#+begin_src emacs-lisp
+  (use-package tramp
+    :defer t
+    :config
+    (setq tramp-default-method "ssh")
+    (setq tramp-verbose 1)
+    (setq remote-file-name-inhibit-cache nil)
+    (add-hook 'kill-emacs-hook #'tramp-cleanup-all-connections)
+    (setq tramp-ssh-controlmaster-options
+          "-o ControlMaster=auto -o ControlPath='~/.ssh/tramp.%%C' -o ControlPersist=no"))
+
+  (defun my-disable-lsp-in-tramp ()
+    "Disable LSP in remote buffers (TRAMP)."
+    (when (file-remote-p default-directory)
+      (lsp-mode -1)))
+
+  (add-hook 'lsp-mode-hook #'my-disable-lsp-in-tramp)
+
+#+end_src
+
+#  LocalWords:  flyspell hunspell vertico

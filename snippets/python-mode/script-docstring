@@ -1,0 +1,17 @@
+# -*- mode: snippet -*-
+# name: script docstring
+# key: docsscript
+# --
+"""
+${1:Script description.}
+
+Usage:
+python ${2:script_name}.py ${3:[args]}
+
+Example:
+python ${2:script_name}.py --input data.json
+
+Args:
+--${4:input} (${5:type}): ${6:Description of input.}
+--${7:output} (${8:type}, optional): ${9:Description. Defaults to ...}
+"""

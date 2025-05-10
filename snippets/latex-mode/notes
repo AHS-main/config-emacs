@@ -1,0 +1,92 @@
+# -*- mode: snippet -*-
+# name: notes
+# key: notes
+# --
+\documentclass[11pt]{article}
+
+% Encoding
+\usepackage[utf8]{inputenc}
+
+% Mathematics
+\usepackage{amsmath, amsthm, amsfonts, amssymb, amscd}
+
+% Tables
+\usepackage{multirow, booktabs}
+
+% Color
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+
+% Graphics and Images
+\usepackage{graphicx, float, rotating}
+
+% Captioning
+\usepackage{caption, subcaption}
+
+% Page Layout
+\usepackage{multicol, geometry}
+%% Set margins to 1 inch; header and text separation to 0.25 inch
+\geometry{
+margin = 1in,
+headsep = 0.25in
+}
+
+% Lists
+\usepackage{enumitem}
+
+% Dummy Text and Images
+\usepackage{lipsum, blindtext}
+
+% Bibliography
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{../../references.bib}
+
+% Algorithms and Pseudocode
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% IPA
+\usepackage{tipa}
+
+% URLs and Hyperlinks
+\usepackage{hyperref}
+\hypersetup{
+colorlinks = true,
+allcolors = blue}
+
+% Custom Environments
+%% Colored Box
+\newenvironment{coloredbox}[2]{
+\begin{tcolorbox}[
+colback = #1!10,  % Background color
+colframe = #1!10, % Frame color (same as background)
+title = #2,       % Custom title
+coltitle = black, % Title text color
+fonttitle = \large \bfseries, % Title font size and bold
+width = \textwidth,
+toptitle = 3mm,  % Space above the title
+boxrule = 0pt,   % No border
+sharp corners,
+breakable,       % Page wrapping
+parbox = false,  % Allow multiple paragraphs
+enlargepage flexible = \baselineskip % Avoids orphaned lines
+]
+}{\end{tcolorbox}}
+
+\begin{document}
+
+\title{Notes Template}
+\thispagestyle{empty}
+
+% First page header
+\begin{center}
+{\LARGE \bf ${1:Title}} \\\\
+{\large ${2:Subtitle}} \\\\
+\end{center}
+
+% Document Content
+$0
+
+\printbibliography
+
+\end{document}
