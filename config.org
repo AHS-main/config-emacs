@@ -732,9 +732,17 @@
 #+end_src
 
 **** Bash/Shell
-
+- Always treat “.sh” buffers as Bash.
+-
 #+begin_src emacs-lisp
-  (add-hook 'bash-mode-hook #'lsp-deferred)
+  (setq sh-shell                    "bash")
+  (setq sh-mode-default-shell-file  "bash")
+
+  (add-hook 'sh-mode-hook
+            (lambda ()
+              (sh-set-shell "bash")
+              (setq sh-basic-offset 2)
+              (lsp-deferred)))
 #+end_src
 
 **** C/C++
