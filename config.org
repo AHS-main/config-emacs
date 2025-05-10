@@ -1,6 +1,7 @@
 #+TITLE: Emacs Configuration
 #+AUTHOR: AHS-main
-#+PROPERTY: header-args:emacs-lisp :tangle yes
+#+PROPERTY: header-args:emacs-lisp :tangle (expand-file-name "config.el" user-emacs-directory)
+
 
 * Package Management
 - Add some commonly used package archives.
